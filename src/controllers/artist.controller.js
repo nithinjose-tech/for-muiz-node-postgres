@@ -1,59 +1,111 @@
-const db = require("../config/database");
+const db = require("../../models");
+const Artist = db.artist;
+const Op = db.Sequelize.Op;
 
-//Controller for fetching all artist
-exports.listAllArtist = async (req, res) => {
-  const response = await db.query("SELECT * FROM artist ORDER BY name ASC");
-  res.status(200).send(response.rows);
+// Create and Save a new Artist
+exports.createArtist = (req, res) => {
+  // Validate request
+  if (!req.body.name) {
+    res.status(400).send({
+      message: "Content can not be empty!",
+    });
+    return;
+  }
+
+  // Create an artist
+  const artist = {
+    name: req.body.name,
+    films: req.body.films,
+  };
+
+  // Save Artist in the database
+  Artist.create(artist)
+    .then((data) => {
+      res.send(data);
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message:
+          err.message || "Some error occurred while creating the Artist.",
+      });
+    });
 };
 
-
-
-//Controller for fetching a  specific artist
-exports.findArtistById = async (req, res) => {
-  const productId = parseInt(req.params.id);
-  const response = await db.query("SELECT * FROM artist WHERE id = $1", [
-    productId,
-  ]);
-  res.status(200).send(response.rows);
+// Retrieve all Artists from the database.
+exports.listAllArtist = (req, res) => {
+  Artist.findAll()
+    .then((data) => {
+      res.send(data);
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message:
+          err.message || "Some error occurred while retrieving tutorials.",
+      });
+    });
 };
 
-//Controller for creating a  new artist
+// Find a single Artist with an id
+exports.findArtistById = (req, res) => {
+  const id = req.params.id;
 
-exports.createArtist = async (req, res) => {
-  const { name, films } = req.body;
-  const {
-    rows,
-  } = await db.query("INSERT INTO artist (name, films) VALUES ($1, $2)", [
-    name,
-    films,
-  ]);
-
-  res.status(201).send({
-    message: "Artist added successfully!",
-    body: {
-      result: { name, films },
-    },
-  });
+  Artist.findByPk(id)
+    .then((data) => {
+      res.send(data);
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: "Error retrieving Artist with id=" + id,
+      });
+    });
 };
 
-//Controller for upadating an  existing artist
+// Update a Artist by the id in the request
+exports.updateArtistById = (req, res) => {
+  const id = req.params.id;
 
-exports.updateArtistById = async (req, res) => {
-  const productId = parseInt(req.params.id);
-  const { name, films } = req.body;
-
-  const response = await db.query(
-    "UPDATE artist SET name = $1, films = $2 WHERE id = $3",
-    [name, films, productId]
-  );
-
-  res.status(200).send({ message: "Artist Updated Successfully!" });
+  Artist.update(req.body, {
+    where: { id: id },
+  })
+    .then((num) => {
+      if (num === 1) {
+        res.send({
+          message: "Artist was updated successfully.",
+        });
+      } else {
+        res.send({
+          message: `Cannot update Artist with id=${id}. Maybe Tutorial was not found or req.body is empty!`,
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: "Error updating Artist with id=" + id,
+      });
+    });
 };
 
-//Controller for deleting an  existing artist
-exports.deleteArtistById = async (req, res) => {
-  const productId = parseInt(req.params.id);
-  await db.query("DELETE FROM artist WHERE id = $1", [productId]);
+// Delete a Artist with the specified id in the request
+exports.deleteArtistById = (req, res) => {
+  const id = req.params.id;
 
-  res.status(200).send({ message: "Artist deleted successfully!", productId });
+  Artist.destroy({
+    where: { id: id },
+  })
+    .then((num) => {
+      if (num == 1) {
+        res.send({
+          message: "Artist was deleted successfully!",
+        });
+      } else {
+        res.send({
+          message: `Cannot delete Artist with id=${id}. Maybe Tutorial was not found!`,
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: "Could not delete Artist with id=" + id,
+      });
+    });
 };
